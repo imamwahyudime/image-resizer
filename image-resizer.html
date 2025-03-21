@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Image Resizer</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        margin: 0;
+        background-color: #f4f4f4;
+      }
+
+      .container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        min-width: 70%;
+      }
+
+      #imageInput {
+        margin-bottom: 10px;
+      }
+
+      #preview {
+        max-width: 60%; /* Desktop max width */
+        max-height: 60vh; /* Desktop max height */
+        width: auto;
+        height: auto;
+        margin-bottom: 10px;
+        border: 1px solid #ddd;
+      }
+
+      @media (max-width: 768px) {
+        #preview {
+            max-width: 100%; /* Mobile max width */
+            max-height: 100vh; /* Mobile max height */
+
+}
+
+}
+
+      #widthInput,
+      #heightInput {
+        width: 80px;
+        margin: 5px;
+      }
+
+      #resizeButton {
+        padding: 8px 16px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      #downloadLink {
+        display: none;
+        margin-top: 10px;
+        transition: transform 0.2s ease-in-out, color 0.2s ease-in-out;
+      }
+
+      #downloadLink.active {
+        transform: scale(1.1);
+        color: #00a000;
+      }
+
+      #aspectRatioContainer {
+        margin-bottom: 10px;
+      }
+
+      #imageInfo {
+        margin-bottom: 5px;
+        font-size: 0.9em;
+        color: #666;
+      }
+      
+
+      #infoButton {
+        background: none;
+        border: none;
+        color: #007bff;
+        cursor: pointer;
+        text-decoration: underline;
+        margin-top: 10px;
+        display: block;
+    }
+    #infoContent {
+        display: none;
+        margin-top: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+        text-align: left;
+    }
+    </style>
+  </head>
+  <!-- This is Basic Image Resizer, created by https://github.com/imamwahyudime -->
+  <!-- Date created is 20/03/2025 -->
+  <!-- I don't want to update to github yet, because I didn't want spam it with 20 commit on one day and 0 commit on other day-->
+  <!-- Just trying to make the profile looks green and balanced -->
+  <body>
+    <div class="container">
+      <input type="file" id="imageInput" accept="image/*" />
+    
+      <img id="preview" src="#" alt="Preview" style="display: none" />
+      <div id="imageInfo"></div>
+      <div id="aspectRatioContainer">
+        <input type="checkbox" id="aspectRatio" checked />
+        <label for="aspectRatio">Retain Aspect Ratio</label>
+      </div>
+      <div>
+        <label for="widthInput">Width:</label>
+        <input type="number" id="widthInput" placeholder="Width" />
+        <label for="heightInput">Height:</label>
+        <input type="number" id="heightInput" placeholder="Height" />
+      </div>
+      <button id="resizeButton">Resize</button>
+      <a id="downloadLink" download="resized_image.png"
+        >Download Resized Image</a
+      >
+
+      <button id="infoButton">What is Image Resizer?</button>
+
+      <div id="infoContent">
+        <p></p>
+          An image resizer allows you to change the dimensions (width and
+          height) of an image.
+        </p>
+
+        <p>
+          You can upload an image, specify the desired width and height, and
+          download the resized version.
+        </p>
+
+        <p>
+          The "Retain Aspect Ratio" option ensures that the image is scaled
+          proportionally, preventing distortion.
+        </p>
+
+        <p>
+            Please note that image resizer is not using any upscales algorithm.
+            <br>
+            While the dimensions is larger it is not improving the image quality nor reducing the noise within the image.
+          </p>
+        
+      </div>
+    </div>
+
+    <script>
+      const imageInput = document.getElementById("imageInput");
+      const preview = document.getElementById("preview");
+      const widthInput = document.getElementById("widthInput");
+      const heightInput = document.getElementById("heightInput");
+      const resizeButton = document.getElementById("resizeButton");
+      const downloadLink = document.getElementById("downloadLink");
+      const aspectRatioCheckbox = document.getElementById("aspectRatio");
+      const imageInfo = document.getElementById("imageInfo");
+
+      const infoButton = document.getElementById("infoButton");
+
+      const infoContent = document.getElementById("infoContent");
+
+      let originalWidth = 0;
+      let originalHeight = 0;
+      let originalSize = 0;
+
+      function updateImageInfo() {
+        if (originalWidth && originalHeight && originalSize) {
+          imageInfo.textContent = `Original: ${originalWidth}x${originalHeight}, Size: ${formatBytes(
+            originalSize
+          )}`;
+        } else {
+          imageInfo.textContent = "";
+        }
+      }
+
+      function formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return "0 Bytes";
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return (
+          parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + " " + sizes[i]
+        );
+      }
+
+      function resetDownloadLink() {
+        downloadLink.style.display = "none"; //hide the link
+      }
+      function grayDownloadLink() {
+        downloadLink.style.color = "gray"; //hide the link
+      }
+
+     imageInput.addEventListener("change", function (event) {
+        const file = event.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = function (e) {
+            preview.src = e.target.result;
+            preview.style.display = "block";
+            preview.style.margin = "auto";
+
+            const img = new Image();
+            img.src = e.target.result;
+            img.onload = function () {
+              originalWidth = img.width;
+              originalHeight = img.height;
+              originalSize = file.size;
+              updateImageInfo();
+                updatePreviewSize(); // Update preview size when a new image is loaded
+            };
+        };
+        reader.readAsDataURL(file);
+        } else {
+          preview.src = "#";
+          preview.style.display = "none";
+          originalWidth = 0;
+          originalHeight = 0;
+          originalSize = 0;
+          updateImageInfo();
+        }
+        resetDownloadLink();
+    updatePreviewSize(); // Update preview size when dimensions change
+      });
+
+      widthInput.addEventListener("input", function () {
+        if (aspectRatioCheckbox.checked && originalWidth && originalHeight) {
+          const newWidth = parseInt(widthInput.value);
+          if (!isNaN(newWidth)) {
+            heightInput.value = Math.round(
+              (newWidth / originalWidth) * originalHeight
+            );
+          }
+        }
+        grayDownloadLink();
+        updatePreviewSize(); // Added this line
+      });
+
+      heightInput.addEventListener("input", function () {
+        if (aspectRatioCheckbox.checked && originalWidth && originalHeight) {
+          const newHeight = parseInt(heightInput.value);
+          if (!isNaN(newHeight)) {
+            widthInput.value = Math.round(
+              (newHeight / originalHeight) * originalWidth
+            );
+          }
+        }
+        grayDownloadLink();
+        updatePreviewSize(); // Added this line
+      });
+
+      resizeButton.addEventListener("click", function () {
+        const img = new Image();
+        img.src = preview.src;
+
+        img.onload = function () {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+        };
+      });
+
+          function updatePreviewSize() {
+    let newWidth = parseInt(widthInput.value);
+    let newHeight = parseInt(heightInput.value);
+
+    if (isNaN(newWidth)) {
+        newWidth = originalWidth;
+    }
+    if (isNaN(newHeight)) {
+        newHeight = originalHeight;
+    }
+
+    preview.style.width = newWidth + 'px';
+    preview.style.height = newHeight + 'px';
+}
+
+
+resizeButton.addEventListener("click", function () {
+    const img = new Image();
+    img.src = preview.src;
+
+    img.onload = function () {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+          let newWidth = parseInt(widthInput.value);
+          let newHeight = parseInt(heightInput.value);
+
+          if (isNaN(newWidth)) {
+            newWidth = originalWidth;
+          }
+          if (isNaN(newHeight)) {
+            newHeight = originalHeight;
+          }
+
+          canvas.width = newWidth;
+          canvas.height = newHeight;
+
+          ctx.drawImage(img, 0, 0, newWidth, newHeight);
+
+          const resizedImage = canvas.toDataURL("image/png");
+          downloadLink.href = resizedImage;
+          downloadLink.style.display = "block";
+          downloadLink.style.color = "";
+
+          downloadLink.classList.add("active");
+          setTimeout(() => {
+            downloadLink.classList.remove("active");
+          }, 300);
+        };
+      });
+
+      infoButton.addEventListener("click", function () {
+        infoContent.style.display =
+          infoContent.style.display === "block" ? "none" : "block";
+      });
+    </script>
+  </body>
+</html>
